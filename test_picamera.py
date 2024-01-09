@@ -8,7 +8,7 @@ import sys
 import math
 import glob
 import signal
-check = 1
+
 # clear ram
 pics = glob.glob('/run/shm/test*.jpg')
 for t in range(0,len(pics)):
@@ -26,7 +26,7 @@ Text = "Left Mouse click on picture to EXIT"
 ttrat = time.time()
 #define mouse clicks (LEFT to EXIT, RIGHT to switch eye detcetion ON/OFF)
 def mouse_action(event, x, y, flags, param):
-    global p,check
+    global p
     if event == cv2.EVENT_LBUTTONDOWN:
         os.killpg(p.pid, signal.SIGTERM)
         cv2.destroyAllWindows()
