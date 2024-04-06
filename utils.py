@@ -6,6 +6,7 @@ from os import listdir
 from os.path import isfile, join
 
 from PIL import Image
+import math
 
 def jpeg_to_png(img_path='images/cap.jpeg', png_path=''):
     png_path=img_path.split('.')[0]+'.png'
@@ -69,6 +70,14 @@ def convert_all_to_png(parent_folder):
             print(f'converting {imgfile} to png...')
             imgfile=jpeg_to_png(imgfile)
     delete_all_non_png(parent_folder)
+
+def rad_to_deg(rad_list):
+    li=[x * 180/math.pi for x in rad_list]
+    return [x[0] for x in li]
+
+
+
+
 if __name__=='__main__':
     # li=[[[1,6],[2,6]],[[3,6],[4,6]]]
     # im = cv2.imread("image-4.png")
