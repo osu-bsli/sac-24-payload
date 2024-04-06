@@ -71,12 +71,52 @@ def convert_all_to_png(parent_folder):
             imgfile=jpeg_to_png(imgfile)
     delete_all_non_png(parent_folder)
 
-def rad_to_deg(rad_list):
-    li=[x * 180/math.pi for x in rad_list]
-    return [x[0] for x in li]
+def rad_to_deg(rad_list, is_rvec = True):
+    # print(f'rads are {rad_list}')
+    li=[(x * 180)/math.pi for x in rad_list]
+    # print(f'li is {li}')
+    return li if not is_rvec else [x[0] for x in li]
+
+import numpy as np
 
 
+# rvec_a and rvec_b are 3x1 numpy arrays
+def get_transformation_required(rvec_a, rvec_b):
+    return rvec_a**-1 * rvec_b
 
+
+def rodrigues_formula(theta, axis):
+    """
+    Rodrigues' rotation formula to convert a rotation vector to a rotation matrix.
+    """
+    axis = axis / np.linalg.norm(axis)
+    cos_theta = np.cos(theta)
+    sin_theta = np.sin(theta)
+    cross_matrix = np.array([[0, -axis[2], axis[1]],
+                        [axis[2], 0, -axis[0]],
+                        [-axis[1], axis[0], 0]])
+    rotation_matrix = (cos_theta * np.eye(3) +
+                       (1 - cos_theta) * np.outer(axis, axis) +
+                       sin_theta * cross_matrix)
+    return rotation_matrix
+
+def rotation_from_to(initial_rotation, final_rotation):
+    """
+    Calculate the rotation required to move from initial_rotation to final_rotation.
+    """
+    initial_matrix = rodrigues_formula(initial_rotation[0], initial_rotation[1])
+    final_matrix = rodrigues_formula(final_rotation[0], final_rotation[1])
+    
+    # Calculate the rotation matrix from initial to final rotation
+    rotation_matrix = np.dot(final_matrix, np.linalg.inv(initial_matrix))
+    
+    # Convert rotation matrix to axis-angle representation
+    cos_theta = (np.trace(rotation_matrix) - 1) / 2
+    theta = np.arccos(np.clip(cos_theta, -1, 1))
+    axis = 1 / (2 * np.sin(theta)) * np.array([rotation_matrix[2, 1] - rotation_matrix[1, 2],
+                                        rotation_matrix[0, 2] - rotation_matrix[2, 0],
+                                        rotation_matrix[1, 0] - rotation_matrix[0, 1]])
+    return theta, axis
 
 if __name__=='__main__':
     # li=[[[1,6],[2,6]],[[3,6],[4,6]]]
@@ -88,4 +128,14 @@ if __name__=='__main__':
     # cv2.imshow('quadrant d',d)
     # cv2.waitKey(0)
     # convert_all_to_png('calib_images')
-    split_into_quadrant_folders('calib_images')
+    # split_into_quadrant_folders('calib_images')
+    
+    
+    
+    # test rodrigues formula:
+    from_vec = [2.59150613, -1.58091633, 0.09634847] # 29
+    to_vec = [2.7668811, 0.36025719, -0.92779701]   # 21
+    result = rotation_from_to(from_vec, to_vec)
+    
+    print(result)
+    
