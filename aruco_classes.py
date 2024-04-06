@@ -16,8 +16,9 @@ class Orientation:
         self.pitch = pitch
         self.yaw = yaw
 
-    # def __repr__(self):
-    #     return f"[Roll: {self.roll}, Pitch: {self.pitch}, Yaw: {self.yaw}]"
+    def __repr__(self):
+        return f"[Roll: {self.roll}, Pitch: {self.pitch}, Yaw: {self.yaw}]"
+    
     def __repr__(self):
         return str([self.roll, self.pitch, self.yaw])
 
@@ -107,6 +108,7 @@ class ArucoVision:
 class ArucoBall:
     def __init__(self):
         self.markerNetwork = {}
+        
     def add_marker(self, marker):
         """
         Add an ArucoMarker object to the graph.
@@ -185,36 +187,6 @@ def draw_aruco_graph(graph):
 
     plt.title("Aruco Marker Graph")
     plt.show()
-
-# if __name__ == "__main__":
-#     # Create an instance of ArucoGraph
-#     graph = ArucoGraph()
-
-#     # Add ArucoMarker objects to the graph
-#     for i in range(5):
-#         marker = ArucoMarker(marker_id=i)
-#         graph.add_marker(marker)
-
-#     # Add edges between markers
-#     graph.add_edge(0, 1, Orientation(yaw=0.0, pitch=0.0, roll=0.0))
-#     graph.add_edge(0, 2, Orientation(yaw=90.0, pitch=90.0, roll=0.0))
-#     graph.add_edge(0, 3, Orientation(yaw=180.0, pitch=0.0, roll=90.0))
-#     graph.add_edge(0, 4, Orientation(yaw=270.0, pitch=5.0, roll=0.0))
-#     graph.add_edge(3, 4, Orientation(yaw=270.0, pitch=5.0, roll=0.0))
-#     graph.add_edge(1, 4, Orientation(yaw=270.0, pitch=5.0, roll=0.0))
-#     graph.add_edge(2, 4, Orientation(yaw=270.0, pitch=5.0, roll=0.0))
-
-#     # Retrieve marker with ID 0 from the graph
-#     marker_0 = graph.get_marker(0)
-#     if marker_0:
-#         print("Adjacent markers of marker 0:")
-#         for adjacent_marker, relative_orientation in marker_0.adjacent_markers.items():
-#             print(f"Adjacent marker ID: {adjacent_marker.marker_id}, Relative orientation: {relative_orientation}")
-
-#     # Example usage:
-#     # Assuming 'graph' is an instance of ArucoGraph as defined in the previous examples
-#     draw_aruco_graph(graph)
-    
     
 def debug_tracking_loop():
     
@@ -233,16 +205,18 @@ def debug_tracking_loop():
                 rvec, tvec = aruco_vision.get_marker_orientation(corner_list)
                 print(f'MARKER {id}')
                 print(f'orientation of marker {id}:', rvec)
+                print(f'translation:', tvec)
                 aruco_vision.annotate_marker_image(frame, all_corner_lists, rvec, tvec)
         cv2.imshow('frame', frame)
         key = cv2.waitKey(3) & 0xFF
         if key == ord('q'):  # Quit
             break
 
-def get_markers_in_single_frame(frame):
+def get_markers_in_single_frame(frame, show_annotated = False):
     aruco_vision = ArucoVision()
     bw_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     markers = aruco_vision.detect_aruco_markers_in_frame(bw_frame)
+    id_list = []
     rvec_list = []
     tvec_list = []
     if markers is None:
@@ -251,24 +225,29 @@ def get_markers_in_single_frame(frame):
         all_corner_lists, marker_ids, rejected_img_points = markers
         for corner_list, id in zip(all_corner_lists, marker_ids):
             rvec, tvec = aruco_vision.get_marker_orientation(corner_list)
-            print(f'MARKER {id}')
-            print(f'orientation of marker {id}:', rvec)
-            aruco_vision.annotate_marker_image(frame, all_corner_lists, rvec, tvec)
+            # print(f'MARKER {id}')
+            # print(f'orientation of marker {id}:', rad_to_deg(rvec[0]))
+            # print(f'translation:', tvec)
+            if show_annotated:
+                aruco_vision.annotate_marker_image(frame, all_corner_lists, rvec, tvec)
+            id_list.append(id)
             rvec_list.append(rvec)
             tvec_list.append(tvec)
-    cv2.imshow('frame', frame)
-    cv2.waitKey(0)
-    return rvec_list, tvec_list
+    if show_annotated:
+        cv2.imshow('frame', frame)
+        cv2.waitKey(0)
+    return id_list, rvec_list, tvec_list
 
 if __name__=='__main__':
     # debug_tracking_loop()
     # read image from file:
     
-    img = cv2.imread('images/test.jpg')
-    rvec_list, tvec_list = get_markers_in_single_frame(img)
+    # img = cv2.imread('images/test.jpg')
+    # id_list, rvec_list, tvec_list = get_markers_in_single_frame(img)
+    # print(f'first rvec is {rvec_list[0]}')
     
-    print(f'num markers found = {len(rvec_list)}')
     
-    for rot, trans in zip(rvec_list, tvec_list):
-        print(f'rotation = {rot}, translation = {trans}')
-        
+    # print(f'num markers found = {len(rvec_list)}\nRotation vectors:')
+    # for id, rot, trans in zip(id_list, rvec_list, tvec_list):
+    #     print(f'rot of {id}: {(''.join(map(lambda x:str(x),rot))).replace('\n', '\t')}')
+    print(1)
