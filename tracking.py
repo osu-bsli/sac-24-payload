@@ -2,14 +2,14 @@ import numpy as np
 import cv2
 import cv2.aruco as aruco
 
-from utils import rad_to_deg
+from utils import rad_to_deg, rotationMatrixToEulerAngles
 
 from aruco_classes import ArucoBall, ArucoVision
 
 ARUCO_DICT = aruco.getPredefinedDictionary(aruco.DICT_4X4_250)
 MARKER_SIZE = 0.02
 BALL_PCKL_FILEPATH = 'calib/from_video/arupickle.pkl'
-
+PRIMARY_MARKER_ID = 22
 
 def track(cap, matrix_coefficients, distortion_coefficients):
     # Define the aruco dictionary and charuco board
@@ -20,13 +20,49 @@ def track(cap, matrix_coefficients, distortion_coefficients):
     vis = ArucoVision()
     ball = ArucoBall()
     ball.load(BALL_PCKL_FILEPATH)
+    ball.setPrimaryMarkerID(PRIMARY_MARKER_ID)
     
     while True:
-        _, frame = cap.read()
         
+        # 'frame' here can just be a PNG image.
+        _, frame = cap.read()
         
         marker_orientations = vis.get_marker_orientations(frame)
         
+        
+        # if you want to only consider specific markers:
+        # only look at marker 22. set interest_markers to empty list to consider ALL numbers.
+        interest_markers = [22]
+        
+        result = [] # list of tuples, [( id, euler_angle('zyx') )]
+        
+        
+        
+        if len(interest_markers):
+            marker_orientations_dict = dict(marker_orientations)
+            for source_marker in interest_markers:
+                if source_marker in marker_orientations_dict:
+                    primary_marker_rot_matrix = ball.getPrimaryMarkerOrientation(source_marker, marker_orientations_dict[source_marker])
+                    euler_degree_orientation = rad_to_deg(rotationMatrixToEulerAngles(primary_marker_rot_matrix))
+                    print(f'from {source_marker:2.0f}, orientation of {PRIMARY_MARKER_ID}:\t{euler_degree_orientation}')
+                    result.append((source_marker, euler_degree_orientation))
+            if len(set(marker_orientations_dict.keys()) - set(interest_markers))<len(marker_orientations_dict.keys()):
+                print('')
+            
+        # else, look at ALL markers currently visible on the screen
+        else:
+            for id, rvec in marker_orientations:
+                primary_marker_rot_matrix = ball.getPrimaryMarkerOrientation(id, rvec)
+                euler_degree_orientation = rad_to_deg(rotationMatrixToEulerAngles(primary_marker_rot_matrix))
+                if id in ball.network.nodes:
+                    # print(f'From {id:2d}:\t{euler_degree_orientation}')
+                    result.append((id, euler_degree_orientation))
+
+            if len(marker_orientations)>0:print('')
+        print(result)
+        
+        # can comment out drawing:
+        # *********** DRAWING: marker axes & bounding square ***********************
         # change frame to grayscale
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  
 
@@ -51,6 +87,8 @@ def track(cap, matrix_coefficients, distortion_coefficients):
                 
         # Display the resulting frame
         cv2.imshow('frame', frame)
+        # ******************************************************************************
+        
         
         # Wait 3 milisecoonds for an interaction. Check the key and do the corresponding job.
         key = cv2.waitKey(3) & 0xFF
@@ -63,7 +101,7 @@ def track(cap, matrix_coefficients, distortion_coefficients):
     cap.release()
     cv2.destroyAllWindows()
 
-
+# IGNORE, helper function for drawing:
 # https://stackoverflow.com/questions/75750177
 def my_estimatePoseSingleMarkers(corner_locations, camera_matrix, distortion_coeffs):
     '''
